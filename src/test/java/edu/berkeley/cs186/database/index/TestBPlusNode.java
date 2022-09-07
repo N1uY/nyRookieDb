@@ -71,7 +71,7 @@ public class TestBPlusNode {
             leafKeys.add(new IntDataBox(i));
             leafRids.add(new RecordId(i, (short) i));
         }
-        LeafNode leaf = new LeafNode(metadata, bufferManager, leafKeys, leafRids, Optional.of(42L),
+         LeafNode leaf = new LeafNode(metadata, bufferManager, leafKeys, leafRids, Optional.of(42L),
                                      treeContext);
 
         // Inner node.

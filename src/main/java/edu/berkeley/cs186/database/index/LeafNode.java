@@ -169,6 +169,7 @@ class LeafNode extends BPlusNode {
             if(this.keys.size()==0){
                 this.keys.add(0,key);
                this.rids.add(0,rid);
+               sync();
                return Optional.empty();
             }
 
@@ -188,6 +189,7 @@ class LeafNode extends BPlusNode {
                 }
             }
             if(this.keys.size()<=2*this.metadata.getOrder()+1){
+                sync();
                 return Optional.empty();
             }else{
                List<DataBox> rightKeys = new ArrayList<>();
@@ -203,6 +205,7 @@ class LeafNode extends BPlusNode {
                LeafNode right  =new LeafNode(metadata, bufferManager, rightKeys, rightRids, rightSibling, treeContext);
                this.rightSibling= Optional.of(right.page.getPageNum());
                Pair<DataBox,Long> res  =new Pair<DataBox,Long>(right.keys.get(0), right.page.getPageNum());
+               sync();
                return Optional.of(res);
 
             }

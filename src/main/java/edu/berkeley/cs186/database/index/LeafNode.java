@@ -158,7 +158,7 @@ class LeafNode extends BPlusNode {
     public LeafNode getLeftmostLeaf() {
         // TODO(proj2): implement
 
-        return null;
+        return this;
     }
 
     // See BPlusNode.put.
@@ -166,7 +166,48 @@ class LeafNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
 
-        return Optional.empty();
+            if(this.keys.size()==0){
+                this.keys.add(0,key);
+               this.rids.add(0,rid);
+               return Optional.empty();
+            }
+
+            if(this.keys.get(0).getInt()>key.getInt()){
+                this.keys.add(0,key);
+               this.rids.add(0,rid);
+            }else if(this.keys.get(this.keys.size()-1).getInt()<key.getInt()){
+                this.keys.add(this.keys.size()-1,key);
+               this.rids.add(this.rids.size()-1,rid);
+            }else{
+                for(int i=0;i<this.keys.size();i++){
+                    if(this.keys.get(i).getInt()>key.getInt()&&i+1<this.keys.size()&&this.keys.get(i+1).getInt()>key.getInt()){
+                        this.keys.add(i+1,key);
+                        this.rids.add(i+1,rid);
+                        break;
+                    }
+                }
+            }
+            if(this.keys.size()<=2*this.metadata.getOrder()+1){
+                return Optional.empty();
+            }else{
+               List<DataBox> rightKeys = new ArrayList<>();
+               List<RecordId> rightRids  =new ArrayList<>();
+               for(int i=this.metadata.getOrder();i<this.keys.size();i++){
+                   rightKeys.add(this.keys.get(i));
+                   rightRids.add(this.rids.get(i));
+               }
+               for(int i=this.keys.size()-1;i>=this.metadata.getOrder();i--){
+                   this.keys.remove(this.keys.size()-1);
+                   this.rids.remove(this.rids.size()-1);
+               }
+               LeafNode right  =new LeafNode(metadata, bufferManager, rightKeys, rightRids, rightSibling, treeContext);
+               this.rightSibling= Optional.of(right.page.getPageNum());
+               Pair<DataBox,Long> res  =new Pair<DataBox,Long>(right.keys.get(0), right.page.getPageNum());
+               return Optional.of(res);
+
+            }
+        
+        
     }
 
     // See BPlusNode.bulkLoad.

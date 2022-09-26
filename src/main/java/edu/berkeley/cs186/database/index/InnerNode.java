@@ -121,8 +121,13 @@ class InnerNode extends BPlusNode {
     public LeafNode getLeftmostLeaf() {
         assert (children.size() > 0);
         // TODO(proj2): implement
-
-        return null;
+        
+        BPlusNode node = this;
+        while(node instanceof InnerNode){
+            InnerNode innerNode = (InnerNode) node;
+            node = innerNode.getChild(0);
+        }
+        return node.getLeftmostLeaf();
     }
 
     // See BPlusNode.put.

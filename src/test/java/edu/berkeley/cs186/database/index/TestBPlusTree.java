@@ -16,6 +16,7 @@ import edu.berkeley.cs186.database.io.MemoryDiskSpaceManager;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.memory.ClockEvictionPolicy;
 import edu.berkeley.cs186.database.recovery.DummyRecoveryManager;
+import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.RecordId;
 import org.junit.After;
 import org.junit.Before;
@@ -46,7 +47,7 @@ public class TestBPlusTree {
     // 3 seconds max per method tested.
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(Timeout.millis((long) (
-                3000 * TimeoutScaling.factor)));
+            3000 * TimeoutScaling.factor)));
 
     @Before
     public void setup()  {
@@ -69,7 +70,7 @@ public class TestBPlusTree {
     // Helpers /////////////////////////////////////////////////////////////////
     private void setBPlusTreeMetadata(Type keySchema, int order) {
         this.metadata = new BPlusTreeMetadata("test", "col", keySchema, order,
-                                              0, DiskSpaceManager.INVALID_PAGE_NUM, -1);
+                0, DiskSpaceManager.INVALID_PAGE_NUM, -1);
     }
 
     private BPlusTree getBPlusTree(Type keySchema, int order) {
@@ -92,8 +93,8 @@ public class TestBPlusTree {
         long newIOs = bufferManager.getNumIOs();
         long maxIOs = maxIOsOverride.hasNext() ? maxIOsOverride.next() : MAX_IO_PER_ITER_CREATE;
         assertFalse("too many I/Os used constructing iterator (" + (newIOs - prevIOs) + " > " + maxIOs +
-                    ") - are you materializing more than you need?",
-                    newIOs - prevIOs > maxIOs);
+                        ") - are you materializing more than you need?",
+                newIOs - prevIOs > maxIOs);
 
         List<T> xs = new ArrayList<>();
         while (iter.hasNext()) {
@@ -102,15 +103,15 @@ public class TestBPlusTree {
             newIOs = bufferManager.getNumIOs();
             maxIOs = maxIOsOverride.hasNext() ? maxIOsOverride.next() : MAX_IO_PER_NEXT;
             assertFalse("too many I/Os used per next() call (" + (newIOs - prevIOs) + " > " + maxIOs +
-                        ") - are you materializing more than you need?",
-                        newIOs - prevIOs > maxIOs);
+                            ") - are you materializing more than you need?",
+                    newIOs - prevIOs > maxIOs);
         }
 
         long finalIOs = bufferManager.getNumIOs();
         maxIOs = xs.size() / (2 * metadata.getOrder());
         assertTrue("too few I/Os used overall (" + (finalIOs - initialIOs) + " < " + maxIOs +
-                   ") - are you materializing before the iterator is even constructed?",
-                   (finalIOs - initialIOs) >= maxIOs);
+                        ") - are you materializing before the iterator is even constructed?",
+                (finalIOs - initialIOs) >= maxIOs);
         return xs;
     }
 
@@ -144,6 +145,7 @@ public class TestBPlusTree {
         String leaf2 = "((7 (7 7)) (8 (8 8)) (9 (9 9)))";
         String leaf3 = "((10 (10 10)) (11 (11 11)))";
         String sexp = String.format("(%s 4 %s 7 %s 10 %s)", leaf0, leaf1, leaf2, leaf3);
+        //tree.toDotPDFFile("test.pdf");
         assertEquals(sexp, tree.toSexp());
     }
 
@@ -251,6 +253,7 @@ public class TestBPlusTree {
         m = String.format("(%s 6 %s)", ml, mr);
         r = String.format("(%s 8 %s)", rl, rr);
         assertEquals(String.format("(%s 4 %s 7 %s)", l, m, r), tree.toSexp());
+
 
         //            (4 7)
         //           /  |  \
@@ -404,6 +407,37 @@ public class TestBPlusTree {
         m = String.format("(%s 6 %s)", ml, mr);
         r = String.format("(%s 8 %s)", rl, rr);
         assertEquals(String.format("(%s 4 %s 7 %s)", l, m, r), tree.toSexp());
+    }
+
+    @Test
+    @Category(PublicTests.class)
+    public void testScanAll() {
+        BPlusTree tree = getBPlusTree(Type.intType(), 1);
+        for (int i = 0; i < 40; i++) {
+            tree.put(new IntDataBox(i), new RecordId(i, (short) i));
+        }
+        Iterator<RecordId> iter = tree.scanAll();
+        tree.toDotPDFFile("hello.pdf");
+        int i = 0;
+        while (iter.hasNext()) {
+            assertEquals(new RecordId(i, (short) i), iter.next());
+            ++i;
+        }
+    }
+
+    @Test
+    @Category(PublicTests.class)
+    public void testScanGreaterEqual() {
+        BPlusTree tree = getBPlusTree(Type.intType(), 3);
+        for (int i = 0; i < 40; i++) {
+            tree.put(new IntDataBox(i), new RecordId(i, (short) i));
+        }
+        Iterator<RecordId> iter = tree.scanGreaterEqual(new IntDataBox(10));
+        int i = 10;
+        while (iter.hasNext()) {
+            assertEquals(new RecordId(i, (short) i), iter.next());
+            ++i;
+        }
     }
 
     @Test

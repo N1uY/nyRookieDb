@@ -8,8 +8,9 @@ import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.memory.Page;
 import edu.berkeley.cs186.database.table.RecordId;
-
-import javax.xml.crypto.Data;
+//import org.graalvm.compiler.nodes.calc.IntegerDivRemNode;
+//
+//import javax.xml.crypto.Data;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -148,7 +149,7 @@ class LeafNode extends BPlusNode {
     // See BPlusNode.get.
     @Override
     public LeafNode get(DataBox key) {
-        // TODO(proj2): implement
+
         return this;
 //        return null;
     }
@@ -156,14 +157,14 @@ class LeafNode extends BPlusNode {
     // See BPlusNode.getLeftmostLeaf.
     @Override
     public LeafNode getLeftmostLeaf() {
-        // TODO(proj2): implement
+
 
         return this;
     }
 
     // See BPlusNode.put.
-    @Override
-    public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
+
+    public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid)throws BPlusTreeException {
         // TODO(proj2): implement
 
             if(this.keys.size()==0){
@@ -172,23 +173,28 @@ class LeafNode extends BPlusNode {
                sync();
                return Optional.empty();
             }
-
+            //no need this code
+            for(int i=0;i<this.keys.size();i++){
+                if(this.keys.get(i).getInt()==key.getInt()){
+                    throw new BPlusTreeException("key exists");
+                }
+            }
             if(this.keys.get(0).getInt()>key.getInt()){
                 this.keys.add(0,key);
                this.rids.add(0,rid);
             }else if(this.keys.get(this.keys.size()-1).getInt()<key.getInt()){
-                this.keys.add(this.keys.size()-1,key);
-               this.rids.add(this.rids.size()-1,rid);
+                this.keys.add(key);
+               this.rids.add(rid);
             }else{
                 for(int i=0;i<this.keys.size();i++){
-                    if(this.keys.get(i).getInt()>key.getInt()&&i+1<this.keys.size()&&this.keys.get(i+1).getInt()>key.getInt()){
+                    if(this.keys.get(i).getInt()<key.getInt()&&i+1<this.keys.size()&&this.keys.get(i+1).getInt()>key.getInt()){
                         this.keys.add(i+1,key);
                         this.rids.add(i+1,rid);
                         break;
                     }
                 }
             }
-            if(this.keys.size()<=2*this.metadata.getOrder()+1){
+            if(this.keys.size()<=2*this.metadata.getOrder()){
                 sync();
                 return Optional.empty();
             }else{
@@ -203,14 +209,14 @@ class LeafNode extends BPlusNode {
                    this.rids.remove(this.rids.size()-1);
                }
                LeafNode right  =new LeafNode(metadata, bufferManager, rightKeys, rightRids, rightSibling, treeContext);
-               this.rightSibling= Optional.of(right.page.getPageNum());
-               Pair<DataBox,Long> res  =new Pair<DataBox,Long>(right.keys.get(0), right.page.getPageNum());
+               this.rightSibling= Optional.of(right.getPage().getPageNum());
+               Pair<DataBox,Long> res  = new Pair<>(right.keys.get(0), right.getPage().getPageNum());
                sync();
                return Optional.of(res);
 
             }
-        
-        
+
+
     }
 
     // See BPlusNode.bulkLoad.
@@ -226,8 +232,12 @@ class LeafNode extends BPlusNode {
     @Override
     public void remove(DataBox key) {
         // TODO(proj2): implement
-
-        return;
+        Optional<RecordId> rid = getKey(key);
+      boolean flag = keys.remove(key);
+      if (rid.isPresent()){
+          rids.remove(rid.get());
+      }
+        sync();
     }
 
     // Iterators ///////////////////////////////////////////////////////////////
@@ -436,7 +446,13 @@ class LeafNode extends BPlusNode {
         assert (nodeType == (byte) 1);
         List<DataBox> keys = new ArrayList<>();
         List<RecordId> rids = new ArrayList<>();
-        Optional<Long> nextSibling = Optional.of(buf.getLong());
+        long aLong = buf.getLong();
+        Optional<Long> nextSibling;
+        if(aLong==-1){
+            nextSibling = Optional.empty();
+        }else{
+            nextSibling = Optional.of(aLong);
+        }
         int n = buf.getInt();
         for (int i = 0; i < n; ++i) {
             keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
